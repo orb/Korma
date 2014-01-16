@@ -13,9 +13,21 @@
   (conf/merge-defaults (:options conn))
   (reset! _default conn))
 
+(defn name-str [val]
+  (if (instance? clojure.lang.Named val)
+    (name val)
+    (str val)))
+
+(defn map-to-properties [clojure-map]
+  (reduce (fn [properties [k v]]
+            (doto properties
+              (.setProperty (name-str k) (name-str v))))
+          (java.util.Properties.) clojure-map))
+
 (defn connection-pool
   "Create a connection pool for the given database spec."
   [{:keys [subprotocol subname classname user password
+           properties
            excess-timeout idle-timeout minimum-pool-size maximum-pool-size
            test-connection-query
            idle-connection-test-period
@@ -33,6 +45,7 @@
   {:datasource (doto (ComboPooledDataSource.)
                  (.setDriverClass classname)
                  (.setJdbcUrl (str "jdbc:" subprotocol ":" subname))
+                 (.setProperties (map-to-properties properties))
                  (.setUser user)
                  (.setPassword password)
                  (.setMaxIdleTimeExcessConnections excess-timeout)
